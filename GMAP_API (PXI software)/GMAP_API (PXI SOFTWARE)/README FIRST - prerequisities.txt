@@ -1,0 +1,1 @@
+This LabVIEW project is intended for PXI chassis with NI PXI-5671 installed and should be used together with the GMAP_API_project installed on a test PC. Test PC and PXI controller should be connected by LAN and must be on the same subnet.
