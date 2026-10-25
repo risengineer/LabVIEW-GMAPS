@@ -1,0 +1,110 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Route Between Two Points (Routes API)</title>
+    <script>
+      (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${
+    c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})
+      ({key: "", v: "weekly"});
+    </script>
+    <script>
+      let map;
+      let markers = [];
+      let mapPolylines = [];
+      let Route;
+       // Global variable that stores the current route coordinates
+      let currentRoutePath = [];
+      async function initMap() {
+        const { Map } = await google.maps.importLibrary("maps");
+        const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+        const { Route: RouteClass } = await google.maps.importLibrary("routes");
+        Route = RouteClass;
+        map = new Map(document.getElementById("map"), {
+          center: { lat: 30.291622, lng: -97.722012 },
+          zoom: 12,
+          mapId: "DEMO_MAP_ID",
+        });
+		
+		        map.addListener("click", (event) => {
+          addMarker(event.latLng, AdvancedMarkerElement);
+          if (markers.length === 2) {
+            drawRoute(markers[0].position, markers[1].position);
+          }
+        });
+      }
+      function addMarker(location, AdvancedMarkerElement) {
+        if (markers.length === 2) {
+          markers.forEach((m) => (m.map = null));
+          markers = [];
+          mapPolylines.forEach((line) => line.setMap(null));
+          mapPolylines = [];
+          currentRoutePath = []; // Reset the stored path
+        }
+
+        const marker = new AdvancedMarkerElement({
+          map: map,
+          position: location,
+          title: markers.length === 0 ? "Origin" : "Destination",
+        });
+        markers.push(marker);
+      }
+
+      async function drawRoute(origin, destination) {
+        mapPolylines.forEach((line) => line.setMap(null));
+        mapPolylines = [];
+        currentRoutePath = [];
+
+        const request = {
+          origin: origin,
+          destination: destination,
+          travelMode: 'DRIVING',
+          fields: ['path', 'viewport'],
+        };
+        try {
+          const { routes } = await Route.computeRoutes(request);
+
+          if (!routes || routes.length === 0) {
+            console.warn('No routes found.');
+            return;
+          }
+          const route = routes[0];
+          currentRoutePath = route.path;
+          console.log('Route coordinates stored:', currentRoutePath.length, 'points');
+          // Draw the route on the map
+          mapPolylines = route.createPolylines();
+          mapPolylines.forEach((polyline) => polyline.setMap(map));
+          if (route.viewport) {
+            map.fitBounds(route.viewport);
+          }
+        } catch (error) {
+          window.alert("Directions request failed: " + error);
+        }
+      }
+       // GLOBAL FUNCTION FOR LABVIEW
+      // Call this via InvokeScript("getRouteCoordinates")
+      function getRouteCoordinates() {
+        // Convert LatLngAltitude objects to plain objects
+        const plainArray = currentRoutePath.map((point) => ({
+          lat: point.lat,
+          lng: point.lng,
+        }));
+        return JSON.stringify(plainArray);
+      }
+      function getRoutePointCount() {
+        return currentRoutePath.length;
+      }
+      function hasRoute() {
+        return currentRoutePath.length > 0;
+      }
+
+      initMap();
+    </script>
+    <style>
+      #map { height: 100%; }
+      html, body { height: 100%; margin: 0; padding: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+  </body>
+</html>
